@@ -42,10 +42,13 @@
 
 
 using Application.Interfaces;
+using Application.Queries;
 using Infrastructure.Data;
 using Infrastructure.Repositories;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
+using System.Reflection;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -55,6 +58,9 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 // Dependency Injection
 builder.Services.AddScoped<IProductRepository, ProductRepository>();
+builder.Services.AddScoped<IProductsQuery, ProductsQuery>();
+
+builder.Services.AddMediatR(typeof(Application.AssemblyReference).Assembly);
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();

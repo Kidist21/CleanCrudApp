@@ -1,6 +1,9 @@
-﻿using Application.DTOs;
+﻿using Application.Commands;
+using Application.DTOs;
 using Application.Interfaces;
+using Application.Queries;
 using Domain.Entities;
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Api.controllers
@@ -9,59 +12,46 @@ namespace Api.controllers
     [Route("api/[controller]")]
     public class ProductsController : ControllerBase
     {
-        private readonly IProductRepository _repository;
-
-        public ProductsController(IProductRepository repository)
+        private readonly IMediator _mediator;
+        private readonly IProductsQuery _productsQuery;
+        public ProductsController(IMediator mediator, IProductsQuery productsQuery)
         {
-            _repository = repository;
+            _mediator = mediator;
+            _productsQuery = productsQuery;
         }
-
         [HttpGet]
         public async Task<IActionResult> GetAll()
-            => Ok(await _repository.GetAllAsync());
+            => Ok(await _productsQuery.GetAllProducts());
 
         [HttpGet("{id}")]
         public async Task<IActionResult> Get(Guid id)
         {
-            var product = await _repository.GetByIdAsync(id);
+            var product = await _productsQuery.GetProductById(id);
             return product == null ? NotFound() : Ok(product);
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create(ProductDto dto)
+        public async Task<IActionResult> Create(CreateProductCommand dto)
         {
-            var product = new Product
-            {
-                Id = Guid.NewGuid(),
-                Name = dto.Name,
-                Price = dto.Price
-            };
-
-            await _repository.AddAsync(product);
-            return Ok(product);
+            var commandResult = await _mediator.Send(dto);
+            return commandResult != null ? Ok(commandResult) : (IActionResult)BadRequest();
         }
 
-        [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, ProductDto dto)
+
+        [HttpPut]
+        public async Task<IActionResult> Update(UpdateProductCommand command)
         {
-            var product = await _repository.GetByIdAsync(id);
-            if (product == null) return NotFound();
-
-            product.Name = dto.Name;
-            product.Price = dto.Price;
-
-            await _repository.UpdateAsync(product);
-            return Ok(product);
+            var result = await _mediator.Send(command);
+            return result != Guid.Empty ? Ok(result) : (IActionResult)NotFound();
         }
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid id)
         {
-            var product = await _repository.GetByIdAsync(id);
-            if (product == null) return NotFound();
+            var command = new DeleteProductCommand { Id = id };
+            var result = await _mediator.Send(command);
+            return result != Guid.Empty ? Ok(result) : (IActionResult)NotFound();
 
-            await _repository.DeleteAsync(product);
-            return NoContent();
         }
     }
 }
